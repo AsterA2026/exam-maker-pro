@@ -16,11 +16,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Locate project
         run: |
-          if [ -f ExamMaker.zip ]; then
-            rm -rf _p && mkdir _p && unzip -q ExamMaker.zip -d _p
-            echo "PROJ=$(realpath "$(dirname "$(find _p -path '*ci/run.sh' | head -1)")/..")" >> "$GITHUB_ENV"
-          else
+          {
+            echo '### Files in repo root'
+            echo '```'
+            ls -la
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          Z=$(ls -t *.zip 2>/dev/null | head -1 || true)
+          if [ -n "$Z" ]; then
+            rm -rf _p && mkdir _p && unzip -q "$Z" -d _p
+            R=$(find _p -path '*ci/run.sh' | head -1)
+            [ -n "$R" ] || { echo "ci/run.sh not found inside $Z" | tee -a "$GITHUB_STEP_SUMMARY"; exit 1; }
+            echo "PROJ=$(realpath "$(dirname "$R")/..")" >> "$GITHUB_ENV"
+            echo "Using zip: $Z" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -f ci/run.sh ]; then
             echo "PROJ=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: no zip file and no ci/run.sh in repo root" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
       - uses: actions/setup-java@v4
         with:
@@ -35,7 +48,19 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: bash "$PROJ/ci/run.sh"
+        run: |
+          set +e
+          bash "$PROJ/ci/run.sh" 2>&1 | tee "$RUNNER_TEMP/build.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            {
+              echo '### Build error (last lines)'
+              echo '```'
+              tail -n 40 "$RUNNER_TEMP/build.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$rc"
       - uses: actions/upload-artifact@v4
         with:
           name: ExamMaker-${{ inputs.task || 'debug' }}
