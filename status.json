@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "grace_days": 0,
+  "ads": false,
+  "message": "التطبيق متوقف حاليًا. تابعنا على قناة تلغرام.",
+  "link": "https://t.me/teachers_2",
+  "button": "قناة التلغرام",
+  "free_fonts": ["Amiri", "Cairo", "Tajawal"],
+  "sub_link": "https://t.me/teachers_2",
+  "sub_text": "للاشتراك تواصل معنا على تلغرام وأرسل معرّف جهازك، وسنرسل لك كود التفعيل.",
+  "pub": {}
+}
