@@ -1,5 +1,10 @@
-
 {
-  "ticker": [],
+  "ticker": [
+    {
+      "name": "مكتبة النور",
+      "link": "https://t.me/a_test2024",
+      "until": "2026-11-19"
+    }
+  ],
   "ads": []
 }
