@@ -24,8 +24,14 @@ jobs:
             ls -la
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          # اختر أحدث ملف ZIP تم رفعه (حسب وقت الرفع إلى GitHub) وليس حسب الاسم
-          Z=$(for f in *.zip; do [ -e "$f" ] && echo "$(git log -1 --format=%ct -- "$f") $f"; done | sort -n | tail -1 | cut -d' ' -f2- || true)
+          # اختر أحدث ملف ZIP (حسب وقت الرفع) يحتوي مشروع التطبيق فعلًا، وتجاهل أي ZIP آخر مثل ملفات APK المحمّلة
+          list=$(for f in *.zip; do [ -e "$f" ] && printf '%s\t%s\n' "$(git log -1 --format=%ct -- "$f")" "$f"; done | sort -rn | cut -f2-)
+          Z=""
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if unzip -l "$f" 2>/dev/null | grep -q 'ci/run.sh'; then Z="$f"; break; fi
+            echo "تم تجاهل $f (ليس مشروع التطبيق)" >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$list"
           if [ -n "$Z" ]; then
             rm -rf _p && mkdir _p && unzip -q "$Z" -d _p
             R=$(find _p -path '*ci/run.sh' | head -1)
