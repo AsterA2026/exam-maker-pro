@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Locate project
         run: |
           {
@@ -22,13 +24,15 @@ jobs:
             ls -la
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          Z=$(ls -t *.zip 2>/dev/null | head -1 || true)
+          # اختر أحدث ملف ZIP تم رفعه (حسب وقت الرفع إلى GitHub) وليس حسب الاسم
+          Z=$(for f in *.zip; do [ -e "$f" ] && echo "$(git log -1 --format=%ct -- "$f") $f"; done | sort -n | tail -1 | cut -d' ' -f2- || true)
           if [ -n "$Z" ]; then
             rm -rf _p && mkdir _p && unzip -q "$Z" -d _p
             R=$(find _p -path '*ci/run.sh' | head -1)
             [ -n "$R" ] || { echo "ci/run.sh not found inside $Z" | tee -a "$GITHUB_STEP_SUMMARY"; exit 1; }
             echo "PROJ=$(realpath "$(dirname "$R")/..")" >> "$GITHUB_ENV"
-            echo "Using zip: $Z" >> "$GITHUB_STEP_SUMMARY"
+            echo "### Using zip: $Z" >> "$GITHUB_STEP_SUMMARY"
+            grep -o 'versionName = "[0-9.]*"' "$(dirname "$R")/../app/build.gradle.kts" >> "$GITHUB_STEP_SUMMARY" || true
           elif [ -f ci/run.sh ]; then
             echo "PROJ=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           else
